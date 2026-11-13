@@ -101,7 +101,7 @@
     return `
 <section class="hero"><div class="wrap">
   <div class="eyebrow">HP Consumer Desktops · Philippines</div>
-  <h1>Welcome, partner.</h1>
+  <h1>HP Consumer Desktops.</h1>
   <p>Find the right HP desktop for your customer. Current SRP and dealer pricing, spec sheets and ready-to-send product details for HP OmniDesk, OmniStudio All-in-One and OMEN gaming desktops.</p>
   <form class="herosearch" id="heroSearch"><input name="q" placeholder="Search model, part number or processor" aria-label="Search products"><button class="btn primary" style="height:50px;padding:0 22px;font-size:15px">Search</button></form>
   <div class="herostats"><div><b>${products.length}</b><span>Models</span></div><div><b>${cats.length}</b><span>Categories</span></div><div><b>${promos.length}</b><span>Active promos</span></div><div><b>${products.length ? peso(min) : '—'}</b><span>SRP starts at</span></div></div>
