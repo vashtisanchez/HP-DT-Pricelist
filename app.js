@@ -80,7 +80,7 @@
   function shell() {
     $('#app').innerHTML = `
 <div class="topbar"><div class="wrap">
-  <a class="brand" href="#home" style="display:flex;align-items:center;gap:12px"><img src="${BASE}images/IONTECH%20LOGO%20WHITE.png" alt="Iontech" style="height:30px"><img src="${BASE}images/HP_Inc.-Logo.wine.svg" alt="HP" style="height:52px"><span>Desktop Pricelist</span></a>
+    <a class="brand" href="#home" style="display:flex;align-items:center;gap:12px"><img src="${BASE}IONTECH%20LOGO%20WHITE.png" alt="Iontech" style="height:30px"><img src="${BASE}HP_Inc.-Logo.wine.svg" alt="HP" style="height:52px"><span>Desktop Pricelist</span></a>
   ${ADMIN ? '<span class="adminflag">ADMIN</span>' : ''}
   <nav class="tabs" aria-label="Sections">
     <a href="#home" data-tab="home">Home</a>
