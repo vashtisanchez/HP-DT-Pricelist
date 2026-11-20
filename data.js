@@ -203,7 +203,7 @@ window.PRICELIST = {
   {
    "title": "HP OmniDesk Desktop AI M03-0025d",
    "subtitle": "Dealer Promo · 24\" Monitor Bundle",
-   "file": "HP-DT 25d PROMO.webp",
+   "file": "HP-DT 25d PROMO.png",
    "sku": "BW7S2PA"
   }
  ],
