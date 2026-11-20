@@ -20,7 +20,8 @@
       if (d && d.products) { products = d.products; promos = d.promos || promos; dirty = true; }
     } catch (e) { /* no saved draft */ }
   }
-  const state = { q: '', cat: '', cpu: '', sort: 'list', view: 'grid' };
+  const state = { q: '', cat: '', cpu: '', sort: 'list', view: 'grid', cmp: [], diff: false };
+  state.cmp = [products[0] && products[0].sku || '', products[1] && products[1].sku || '', ''];
   const specOK = {};
 
   /* ---------- helpers ---------- */
@@ -86,6 +87,7 @@
     <a href="#home" data-tab="home">Home</a>
     <a href="#products" data-tab="products">Products <span class="n" id="nProducts"></span></a>
     <a href="#promos" data-tab="promos">Promos <span class="n" id="nPromos"></span></a>
+    <a href="#compare" data-tab="compare">Compare</a>
     <a href="#sites" data-tab="sites">HP Sites</a>
   </nav></div></div>
 <main id="view"></main>
@@ -113,7 +115,8 @@
   ${promos.length ? `<section class="sec"><div class="sechead"><div><div class="eyebrow">Dealer promos</div><h3 style="margin:2px 0 14px">Current promotions</h3></div><a class="btn sm" href="#promos" style="margin-bottom:14px">All promos →</a></div><div class="promos">${promos.slice(0, 3).map(promoCard).join('')}</div></section>` : ''}
   <section class="sec"><div class="eyebrow">Resources</div><h3>Quick links</h3>
     <div class="sites">
-      <div class="site"><h3>Full pricelist</h3><p>Search, filter and compare every model. Copy product details or download the spec sheet per model.</p><a class="btn primary" href="#products">Browse products</a></div>
+      <div class="site"><h3>Full pricelist</h3><p>Search and filter every model. Copy product details or download the spec sheet per model.</p><a class="btn primary" href="#products">Browse products</a></div>
+      <div class="site"><h3>Compare models</h3><p>Put up to three desktops side by side and see how specs and prices differ.</p><a class="btn" href="#compare">Compare models</a></div>
       <div class="site"><h3>Export</h3><p>Download the current pricelist as an Excel or CSV file, or print it as a PDF.</p><div class="actions"><button class="btn" data-act="xlsx">↓ Excel</button><button class="btn" data-act="csv">↓ CSV</button></div></div>
       <div class="site"><h3>HP related sites</h3><p>Official HP tools for product content, service centers and warranty checks.</p><a class="btn" href="#sites">Open HP Sites</a></div>
     </div>
@@ -139,7 +142,7 @@
     <div class="side" style="margin-top:auto">
       <div class="prices"><div class="pricebox"><small>SRP</small><strong>${peso(p.srp)}</strong></div><div class="pricebox dp"><small>Dealer price</small><strong>${peso(p.dp)}</strong></div></div>
       ${String(p.orderBasis).toLowerCase() === 'yes' ? '<div class="note">Order basis. Please confirm before ordering.</div>' : ''}
-      <div class="opts"><button class="btn sm primary" data-act="copy">⧉ Copy details</button>${specBtn(p, 'sm')}<button class="btn sm full" data-act="detail">View full details</button></div>
+      <div class="opts"><button class="btn sm primary" data-act="copy">⧉ Copy details</button>${specBtn(p, 'sm')}<button class="btn sm" data-act="detail">View details</button><button class="btn sm" data-act="compare">⇆ Compare</button></div>
       ${ADMIN ? '<div class="adminrow"><button class="btn sm" data-act="edit">Edit</button><button class="btn sm danger" data-act="del">Delete</button></div>' : ''}
     </div>
   </div></article>`;
@@ -181,6 +184,43 @@ ${ADMIN ? `<form class="panel" id="promoForm" style="margin-bottom:16px"><div cl
 <button class="btn primary" style="height:42px">Add promo</button></div></form>` : ''}
 ${promos.length ? `<div class="promos">${promos.map(promoCard).join('')}</div>` : '<div class="empty">No active promos right now.</div>'}</div>`;
   }
+
+  /* ---------- compare ---------- */
+  const CMP_ROWS = [['Desktop type', p => typeOf(p)], ['Processor', p => p.processor], ['Memory', p => p.memory], ['Storage', p => p.storage], ['Graphics', p => p.graphics], ['Display', p => p.display], ['Color / ID', p => p.idMechanical], ['Operating system', p => p.os], ['Software', p => p.dib], ['Inclusion', p => p.inclusion], ['Bundled monitor', p => p.bundleMonitor], ['Order basis', p => p.orderBasis]];
+  function cmpSelect(i) {
+    const cur = state.cmp[i] || '';
+    return `<select class="cmpsel" data-slot="${i}" aria-label="Model ${i + 1}"><option value="">Select a model</option>${CATS.filter(c => products.some(p => p.category === c)).map(c => `<optgroup label="${esc(TYPE[c] || c)}">${products.filter(p => p.category === c).map(p => `<option value="${esc(p.sku)}" ${p.sku === cur ? 'selected' : ''}>${esc(p.name)}</option>`).join('')}</optgroup>`).join('')}</select>`;
+  }
+  function compareView() {
+    state.cmp = state.cmp.map(s => (s && bySku(s)) ? s : '');
+    const sel = state.cmp.map(s => s && bySku(s));
+    const chosen = sel.filter(Boolean);
+    const head = sel.map((p, i) => `<div class="ccol" ${p ? `data-sku="${esc(p.sku)}"` : ''}>${cmpSelect(i)}${p ? `
+      <div class="cph" data-act="detail">${img(p)}</div>
+      <div class="sku">${esc(p.sku)}</div><h3 class="cname" data-act="detail">${esc(p.name)}</h3>
+      <div class="cprice"><div><small>SRP</small><strong>${peso(p.srp)}</strong></div><div class="dp"><small>Dealer price</small><strong>${peso(p.dp)}</strong></div></div>
+      ${promoFor(p.sku) ? '<div class="cpromo">Promo available</div>' : ''}
+      <div class="opts"><button class="btn sm primary" data-act="copy">⧉ Copy details</button>${specBtn(p, 'sm')}</div>` : '<div class="cempty">Choose a model above to add it to the comparison.</div>'}</div>`).join('');
+    const rows = CMP_ROWS.map(([label, f]) => {
+      const vals = sel.map(p => p ? (has(f(p)) ? String(f(p)).trim() : '—') : '');
+      const filled = vals.filter((v, i) => sel[i]);
+      const diff = filled.length > 1 && new Set(filled.map(v => v.toLowerCase())).size > 1;
+      if (state.diff && !diff) return '';
+      return `<div class="crow ${diff ? 'diff' : ''}"><div class="clabel">${label}</div><div class="ccells">${vals.map((v, i) => `<div class="ccell">${sel[i] ? esc(v) : ''}</div>`).join('')}</div></div>`;
+    }).join('');
+    return `<div class="wrap page">
+<div class="pagehead"><div><div class="eyebrow">HP Consumer Desktops</div><h2>Compare models</h2><p>Pick up to three desktops to see their specs and prices side by side. Rows where the models differ are highlighted.</p></div>
+  <div class="actions"><label class="chk"><input type="checkbox" id="cmpDiff" ${state.diff ? 'checked' : ''}> Show differences only</label><button class="btn" data-act="cmpclear">Clear</button></div></div>
+<div class="cmp">
+  <div class="chead">${head}</div>
+  ${chosen.length ? `<div class="cspecs">${rows || '<div class="empty">These models have the same specs.</div>'}</div>` : ''}
+</div></div>`;
+  }
+  function addCompare(sku) {
+    if (!state.cmp.includes(sku)) { const i = state.cmp.indexOf(''); state.cmp[i >= 0 ? i : 2] = sku; }
+    if ($('#dlg').open) $('#dlg').close();
+    go('compare');
+  }
   function sitesView() {
     return `<div class="wrap page">
 <div class="pagehead"><div><div class="eyebrow">Resources</div><h2>HP Related Sites</h2><p>Quick links to official HP tools for product content, service and warranty. Each site opens in a new tab.</p></div></div>
@@ -192,7 +232,7 @@ ${promos.length ? `<div class="promos">${promos.map(promoCard).join('')}</div>` 
 <div class="ph">${img(p)}</div>
 <div><div class="sku">${esc(p.sku)} · ${esc(typeOf(p))}</div><h2>${esc(p.name)}</h2>
 <div class="prices" style="border:0;padding:6px 0 10px;margin:0"><div class="pricebox"><small>Suggested retail (SRP)</small><strong>${peso(p.srp)}</strong></div><div class="pricebox dp"><small>Dealer price (DP)</small><strong>${peso(p.dp)}</strong></div></div>
-<div class="opts" style="margin:0 0 14px"><button class="btn primary" data-act="copy">⧉ Copy details</button>${specBtn(p)}${pr ? '<a class="btn full" href="#promos" data-act="close">View promo for this model</a>' : ''}</div>
+<div class="opts" style="margin:0 0 14px"><button class="btn primary" data-act="copy">⧉ Copy details</button>${specBtn(p)}<button class="btn full" data-act="compare">⇆ Compare with other models</button>${pr ? '<a class="btn full" href="#promos" data-act="close">View promo for this model</a>' : ''}</div>
 <div class="specs">${row('Processor', p.processor)}${row('Memory', p.memory)}${row('Storage', p.storage)}${row('Graphics', p.graphics)}${row('Display', p.display)}${row('Color / ID', p.idMechanical)}${row('OS', p.os)}${row('Software', p.dib)}${row('Inclusion', p.inclusion)}${row('Monitor', p.bundleMonitor)}${row('Order basis', p.orderBasis)}</div>
 ${p.shortDescription ? `<div class="desc">${esc(p.shortDescription)}</div>` : ''}</div></div>`;
     open('#dlg'); applySpecs();
@@ -247,11 +287,12 @@ ${p.shortDescription ? `<div class="desc">${esc(p.shortDescription)}</div>` : ''
 
   /* ---------- routing + events ---------- */
   function route() {
-    const tab = ({ products: 1, promos: 1, sites: 1 })[location.hash.slice(1)] ? location.hash.slice(1) : 'home';
-    $('#view').innerHTML = tab === 'products' ? productsView() : tab === 'promos' ? promosView() : tab === 'sites' ? sitesView() : home();
+    const tab = ({ products: 1, promos: 1, compare: 1, sites: 1 })[location.hash.slice(1)] ? location.hash.slice(1) : 'home';
+    $('#view').innerHTML = tab === 'products' ? productsView() : tab === 'promos' ? promosView() : tab === 'compare' ? compareView() : tab === 'sites' ? sitesView() : home();
     $$('.tabs a').forEach(a => a.classList.toggle('on', a.dataset.tab === tab));
     $('#nProducts').textContent = products.length; $('#nPromos').textContent = promos.length;
     if (tab === 'products') drawProducts();
+    applySpecs();
   }
   function go(tab) { if (location.hash === '#' + tab) route(); else location.hash = tab; window.scrollTo(0, 0); }
 
@@ -264,6 +305,8 @@ ${p.shortDescription ? `<div class="desc">${esc(p.shortDescription)}</div>` : ''
     const holder = b.closest('[data-sku]'), sku = b.dataset.sku || (holder && holder.dataset.sku), p = sku && bySku(sku), act = b.dataset.act;
     if (act === 'close') { $('#dlg').close(); }
     else if (act === 'detail' && p) detail(p);
+    else if (act === 'compare' && p) addCompare(p.sku);
+    else if (act === 'cmpclear') { state.cmp = ['', '', '']; state.diff = false; route(); }
     else if (act === 'copy' && p) copy(copyText(p), 'Copied ' + p.sku + ' details');
     else if (act === 'zoom') { $('#light img').src = b.dataset.src; open('#light'); }
     else if (act === 'xlsx') xlsx();
@@ -283,6 +326,8 @@ ${p.shortDescription ? `<div class="desc">${esc(p.shortDescription)}</div>` : ''
   document.addEventListener('change', e => {
     const t = e.target;
     if (t.id === 'cat' || t.id === 'cpu' || t.id === 'sort') { state[t.id] = t.value; drawProducts(); }
+    if (t.classList && t.classList.contains('cmpsel')) { state.cmp[+t.dataset.slot] = t.value; route(); }
+    if (t.id === 'cmpDiff') { state.diff = t.checked; route(); }
     if (t.id === 'importFile' && t.files[0]) { importFile(t.files[0]); t.value = ''; }
   });
   document.addEventListener('submit', e => {
